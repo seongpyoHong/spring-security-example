@@ -85,9 +85,6 @@ AuthenticationProvider은 실제 인증이 일어나는 곳으로 Authentication
     - 서비스상에서 유저에게 부여하고싶은 권한
     - 소셜 로그인한 사용자의 경우, 소셜 서비스가 부여한 ID 코드 (로그인 ID 아님)
 
-- 유저 정보를 인증과정에서 처리하는 방식
-    - 유저 모델을 그대로 사용
-    - 유저 디테일즈 구현체를 사용
 
 Account.java
 ```java
@@ -131,3 +128,87 @@ public enum UserRole {
 ```
 
 UserRole을 Account에 매핑할 때, 기본 설정인 Ordinal을 사용하게 되면 index 번호가 들어가게 되는데 순서가 바뀔 경우 Enum 값이 달라진다. 따라서 EnumType.String을 사용한다.
+
+
+### Token 생성 
+- PreAuthorizationToken : 인증 전 객체를 반환
+- PostAuthorizationToken : 인증 후 객체를 반환
+    - 유저 정보를 인증과정에서 처리하는 방식
+       - 유저 모델을 그대로 사용
+       - User Details 구현체를 사용 => Spring의 User Class를 상속받아 사용 (여기서는 이 방법으로 진행) 
+     ```java
+    public class AccountContext extends User {
+    
+        private AccountContext(String username, String password, Collection<? extends GrantedAuthority> authorities) {
+            super(username, password, authorities);
+        }
+    
+        public static AccountContext fromAccountModel(Account account) {
+            return new AccountContext(account.getUserId(), account.getPassword(), parseAuthorities(account.getUserRole()));
+        }
+    
+        private static List<SimpleGrantedAuthority> parseAuthorities(UserRole role) {
+            return Stream.of(role).map(r -> new SimpleGrantedAuthority(r.getRoleName())).collect(Collectors.toList());
+        }
+    }
+    ```
+PreAuthoricationToken -> Provider -> PostAuthorizationToken 과정으로 인증 진행
+
+### Account Context Service 생성
+AccountContext를 DB로 부터 Account를 가져와 생성하기 위해 Account Context Service를 사용한다. 
+```java
+@Component
+public class AccountContextService implements UserDetailsService {
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String userId) throws UsernameNotFoundException {
+        Account account =  accountRepository.findByUserId(userId).orElseThrow(() -> new NoSuchElementException("UserID Not Found!"));
+        return getAccountContext(account);
+    }
+
+    private AccountContext getAccountContext(Account account) {
+        return AccountContext.fromAccountModel(account);
+    }
+}
+```
+### Provider 생성
+실제 인증과정을 수행하는 Provider를 생성한다.
+
+```java
+@Component
+public class FormLoginAuthenticationProvider implements AuthenticationProvider {
+    @Autowired
+    private AccountContextService accountContextService;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+        PreAuthorizationToken token = (PreAuthorizationToken) authentication;
+        String username = token.getUsername();
+        String password = token.getPassword();
+
+        Account account = accountRepository.findByUserId(username).orElseThrow(() -> new NoSuchElementException("UserID Not Found!"));
+        if (isCorrectPassword(password, account)) {
+            return PostAuthorizationToken.getTokenFromAccountContext(AccountContext.fromAccountModel(account));
+        }
+        throw new NoSuchElementException("Authentication is not allowed!");
+
+    }
+
+    @Override
+    public boolean supports(Class<?> authentication) {
+        return PreAuthorizationToken.class.isAssignableFrom(authentication);
+    }
+
+    private boolean isCorrectPassword(String password, Account account) {
+        return passwordEncoder.matches(account.getPassword(), password);
+    }
+}
+```
