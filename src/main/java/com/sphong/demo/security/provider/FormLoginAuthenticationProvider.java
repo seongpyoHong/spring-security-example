@@ -16,11 +16,11 @@ import org.springframework.stereotype.Component;
 import java.util.NoSuchElementException;
 
 
+/*
+Authentication Manager를 통해서 불려져야한다.
+ */
 @Component
 public class FormLoginAuthenticationProvider implements AuthenticationProvider {
-    @Autowired
-    private AccountContextService accountContextService;
-
     @Autowired
     private AccountRepository accountRepository;
 
@@ -47,6 +47,6 @@ public class FormLoginAuthenticationProvider implements AuthenticationProvider {
     }
 
     private boolean isCorrectPassword(String password, Account account) {
-        return passwordEncoder.matches(account.getPassword(), password);
+        return passwordEncoder.matches(password,account.getPassword());
     }
 }

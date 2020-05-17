@@ -212,3 +212,21 @@ public class FormLoginAuthenticationProvider implements AuthenticationProvider {
     }
 }
 ```
+
+### JWT
+참고자료 [https://blog.outsider.ne.kr/1160]
+토큰 기반의 인증이 많아지면서 HTTP Authorization 헤더나 URI 쿼리 파라미터 등 공백을 사용할 수 없는 곳에서 가볍게 사용할 수 있는 토큰으로 설계
+마침표(`.`)를 구분자로 세 부분으로 나누어져 있다.
+- **JOSE (JSON Object Signing and Encryption)**
+- **JWT Claim Set** : 실제 토큰의 바디로 토큰에 포함될 내용
+- **Signature** : 누가 발급을 했는지 인증하는 부분
+
+JWT가 다른 토큰하고 가장 다른 부분은 토큰 자체가 데이터를 가지고 있다는 점
+일반적인 토큰의 흐름은 API 요청 시에 들어온 토큰을 보고 이 토큰이 유효한지 확인한다. 이 과정에서 데이터베이스에 접근하는 비용이 발생한다.
+
+**주의점**
+- Claim Set은 암호화하지 않기 때문에 보안이 중요한 데이터는 넣으면 안된다. 
+- Claim Set의 내용이 많아지면 토큰의 길이가 길어진다. 
+- Stateless를 유지하면서 토큰을 강제로 만료시킬 방법이 없다.
+- Debug를 사용하여 토큰의 내용을 확인하는 과정이 필요하다. 
+
