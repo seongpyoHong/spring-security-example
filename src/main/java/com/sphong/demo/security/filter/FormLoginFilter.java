@@ -56,4 +56,5 @@ public class FormLoginFilter extends AbstractAuthenticationProcessingFilter {
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
         this.authenticationSuccessHandler.onAuthenticationSuccess(request, response, authResult);
     }
+
 }

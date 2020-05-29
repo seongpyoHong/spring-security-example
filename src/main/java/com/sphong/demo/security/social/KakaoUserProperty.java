@@ -1,25 +1,24 @@
 package com.sphong.demo.security.social;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.sphong.demo.config.KakaoPropertyDeserializer;
+import lombok.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Getter
+@Setter
 @NoArgsConstructor
+@JsonDeserialize(using = KakaoPropertyDeserializer.class)
 public class KakaoUserProperty implements SocialUserProperty {
-    @JsonProperty("kakao_account.id")
     private Long id;
 
-    @JsonProperty("kakao_account.email")
     private String email;
 
-    @JsonProperty("kakao_account.profile.profile_image_url")
     private String profileHref;
 
-    @JsonProperty("kakao_account.profile.nickname")
     private String nickname;
 
     @Override
@@ -36,9 +35,16 @@ public class KakaoUserProperty implements SocialUserProperty {
     public String getProfileHref() {
         return this.profileHref;
     }
-
     @Override
     public String getEmail() {
         return this.email;
+    }
+
+    @Builder
+    public KakaoUserProperty(Long id, String email, String profileHref, String nickname) {
+        this.id = id;
+        this.email = email;
+        this.profileHref = profileHref;
+        this.nickname = nickname;
     }
 }

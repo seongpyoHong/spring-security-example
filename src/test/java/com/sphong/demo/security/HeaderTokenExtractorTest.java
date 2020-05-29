@@ -15,11 +15,11 @@ class HeaderTokenExtractorTest {
 
     @BeforeEach
     public void setUp() {
-        this.header = "Bearer asdasdasdasdasdasdasdasd";
+        this.header = "Bearer token-value";
     }
 
     @Test
     public void JwtExtractorTest() {
-        assertEquals("asdasdasdasdasdasdasdasd",headerTokenExtractor.extract(header));
+        assertEquals("token-value",headerTokenExtractor.extract(header));
     }
 }
