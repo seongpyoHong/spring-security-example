@@ -1,13 +1,19 @@
-package com.sphong.demo.security;
+package com.sphong.demo.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.sphong.demo.security.FilterSkipMatcher;
+import com.sphong.demo.security.HeaderTokenExtractor;
 import com.sphong.demo.security.filter.FormLoginFilter;
 import com.sphong.demo.security.filter.JwtAuthenticationFilter;
+import com.sphong.demo.security.filter.SocialLoginFilter;
 import com.sphong.demo.security.handler.FormLoginAuthenticationFailurehandler;
 import com.sphong.demo.security.handler.FormLoginAuthenticationSuccesshandler;
 import com.sphong.demo.security.handler.JwtAuthenticationFailureHandler;
 import com.sphong.demo.security.provider.FormLoginAuthenticationProvider;
 import com.sphong.demo.security.provider.JwtAuthenticationProvider;
+import com.sphong.demo.security.provider.SocialLoginAuthenticationProvider;
+import com.sphong.demo.security.social.KakaoUserProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,10 +48,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private JwtAuthenticationProvider jwtAuthenticationProvider;
 
     @Autowired
+    private SocialLoginAuthenticationProvider socialLoginAuthenticationProvider;
+
+    @Autowired
     private JwtAuthenticationFailureHandler jwtAuthenticationFailureHandler;
 
     @Autowired
     private HeaderTokenExtractor headerTokenExtractor;
+
+
     @Bean
     public PasswordEncoder getPasswordEncoder() {
         return new BCryptPasswordEncoder();
@@ -53,7 +64,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Bean
     public ObjectMapper getObjectMapper() {
-        return new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper();
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(KakaoUserProperty.class, new KakaoPropertyDeserializer());
+        objectMapper.registerModule(module);
+        return objectMapper;
     }
 
     //AuthenticationManager를 빈으로 등록
@@ -69,8 +84,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     protected JwtAuthenticationFilter jwtFilter() throws Exception {
-        FilterSkipMatcher matcher = new FilterSkipMatcher(Arrays.asList("/formlogin"), "/api/**");
+        FilterSkipMatcher matcher = new FilterSkipMatcher(Arrays.asList("/formlogin", "/social"), "/api/**");
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(matcher, jwtAuthenticationFailureHandler, headerTokenExtractor);
+        filter.setAuthenticationManager(super.authenticationManagerBean());
+        return filter;
+    }
+
+    protected SocialLoginFilter socialFilter() throws Exception {
+        SocialLoginFilter filter = new SocialLoginFilter("/social",formLoginAuthenticationSuccesshandler);
         filter.setAuthenticationManager(super.authenticationManagerBean());
         return filter;
     }
@@ -78,6 +99,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.authenticationProvider(this.formLoginAuthenticationProvider)
+            .authenticationProvider(this.socialLoginAuthenticationProvider)
             .authenticationProvider(this.jwtAuthenticationProvider);
     }
 
@@ -87,7 +109,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         http.csrf().disable();
         http.headers().frameOptions().disable();
+        http.authorizeRequests()
+            .antMatchers("/h2-console**").permitAll();
         http.addFilterBefore(formLoginFilter(), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(socialFilter(), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class);
     }
 }

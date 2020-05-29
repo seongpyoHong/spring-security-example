@@ -1,5 +1,6 @@
 package com.sphong.demo.domain;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,22 @@ public class Account {
     @Column(name = "ACCOUNT_SOCIAL_ID")
     private Long socialId;
 
+    @Column(name = "ACCOUNT_SOCIAL_PROVIDER")
+    @Enumerated(value = EnumType.STRING)
+    private SocialProvider socialProvider;
+
     @Column(name = "ACCOUNT_SOCIAL_PROFILEPIC")
     private String profileHref;
+
+    @Builder
+    public Account(Long id, String username, String userId, String password, UserRole userRole, Long socialId, SocialProvider socialProvider, String profileHref) {
+        this.id = id;
+        this.username = username;
+        this.userId = userId;
+        this.password = password;
+        this.userRole = userRole;
+        this.socialId = socialId;
+        this.socialProvider = socialProvider;
+        this.profileHref = profileHref;
+    }
 }
